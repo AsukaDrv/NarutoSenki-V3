@@ -33,6 +33,7 @@ require 'ui.SelectButton'
 
 require 'ui.StartMenu'
 require 'ui.NetworkLobbyLayer'
+require 'ui.LocalLobbyLayer'
 
 require 'ui.CreditLayer'
 require 'ui.SelectLayer'

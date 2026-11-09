@@ -10,8 +10,14 @@ function clearStaleNetworkSessionForMenu()
         wsSend('{"type":"queue_leave"}')
         wsDisconnect()
     end
+    if linkIsActive and linkIsActive() then
+        linkStop()
+    end
     _G.__networkLobbyLayer = nil
     _G.__networkSelectLayer = nil
+    _G.__localLobbyLayer = nil
+    _G.__localMabarActive = nil
+    _G.__localMabarRole = nil
     _G.__networkMatchId = nil
     _G.__networkVsBot = nil
     wsClearMatchConfig()
@@ -118,9 +124,14 @@ function onGameOver()
 end
 
 function onWebSocketEvent(eventName, payload)
-    local lobby = _G.__networkLobbyLayer
+    local lobby = _G.__localLobbyLayer
     if lobby and lobby.handleWebSocketEvent then
         lobby:handleWebSocketEvent(eventName, payload)
+        return
+    end
+    local networkLobby = _G.__networkLobbyLayer
+    if networkLobby and networkLobby.handleWebSocketEvent then
+        networkLobby:handleWebSocketEvent(eventName, payload)
         return
     end
     local selectLayer = _G.__networkSelectLayer
@@ -131,10 +142,17 @@ function onWebSocketEvent(eventName, payload)
     log('[WS] Event %s %s', eventName or '', payload or '')
 end
 
+--- Lobby online (WebSocket relay server) — tombol "Custom" di menu utama
+--- sekarang masuk ke sini dulu (pilih WiFi LAN/Hotspot/Bluetooth/Online).
 function enterNetworkLobby()
-    log('Enter network lobby')
+    enterLocalLobby()
+end
+
+--- Lobby mabar lokal (WiFi LAN / Hotspot / Bluetooth / Online)
+function enterLocalLobby()
+    log('Enter local lobby (mabar)')
     local scene = CCScene:create()
-    local lobbyLayer = NetworkLobbyLayer:create()
+    local lobbyLayer = LocalLobbyLayer:create()
     scene:addChild(lobbyLayer)
     director.replaceSceneWithFade(scene, 1)
 end

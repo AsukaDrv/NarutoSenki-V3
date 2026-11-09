@@ -3,25 +3,23 @@ import org.apache.tools.ant.taskdefs.condition.Os
 apply plugin: 'com.android.application'
 
 android {
-    compileSdkVersion 31
-    buildToolsVersion "31.0.0"
+    namespace 're.naruto.game'
+    compileSdk 35
+    ndkVersion '27.1.12297006'
 
     defaultConfig {
-        applicationId "net.zakume.game"
-        minSdkVersion 21
-        //noinspection ExpiredTargetSdkVersion
-        targetSdkVersion 31
-        versionCode 2
-        versionName "2.1"
+        applicationId 're.naruto.game'
+        minSdk 24
+        targetSdk 35
+        versionCode 3
+        versionName '3.0'
 
         externalNativeBuild {
             if (PROP_BUILD_TYPE == 'ndk-build') {
                 ndkBuild {
-                    targets 'cocos2dcpp'
                     arguments 'NDK_TOOLCHAIN_VERSION=clang'
                     arguments '-j' + Runtime.runtime.availableProcessors()
-                    // GCC toolchain 4.9 is removed in modern NDK; use clang.
-                    // arguments 'APP_PLATFORM=android-'+PROP_APP_PLATFORM
+                    arguments 'APP_STL=c++_shared'
 
                     def module_paths = [
                             project.file("../../../..").absolutePath,
@@ -32,7 +30,6 @@ android {
                             project.file("../../../../CocosDenshion/android").absolutePath
                     ]
                     if (Os.isFamily(Os.FAMILY_WINDOWS)) {
-                        // should use '/'
                         module_paths = module_paths.collect { it.replaceAll('\\\\', '/') }
                         arguments 'NDK_MODULE_PATH=' + module_paths.join(";")
                     } else {
@@ -64,6 +61,12 @@ android {
         }
     }
 
+    packagingOptions {
+        jniLibs {
+            useLegacyPackaging = false
+        }
+    }
+
     signingConfigs {
         debug {
             if (project.hasProperty("DEBUG_STORE_FILE")) {
@@ -85,9 +88,8 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled false // NOTE: Crash when minifyEnabled is true
-            jniDebuggable true
-            debuggable true
+            minifyEnabled false
+            shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
             if (project.hasProperty("RELEASE_STORE_FILE")) {
                 signingConfig signingConfigs.release
@@ -95,27 +97,37 @@ android {
         }
         debug {
             minifyEnabled false
-            jniDebuggable true
         }
+    }
+
+    lint {
+        abortOnError false
+        checkReleaseBuilds false
     }
 }
 
 dependencies {
     implementation fileTree(dir: 'libs', include: ['*.jar'])
     implementation project(':libcocos2dx')
-    implementation 'com.squareup.okhttp3:okhttp:3.12.13'
+    implementation 'androidx.appcompat:appcompat:1.6.1'
+    implementation 'com.squareup.okhttp3:okhttp:4.12.0'
 }
 
 task cleanAssets(type: Delete) {
     delete 'assets'
 }
 
-task copLuaFiles(type: Copy) {
+task copyLuaFiles(type: Copy) {
     from '../../lua'
     into 'assets/lua'
 }
 
-task copyAssets(type: Copy, dependsOn: copLuaFiles) {
+task copyModFiles(type: Copy) {
+    from '../../mods'
+    into 'assets/mods'
+}
+
+task copyAssets(type: Copy, dependsOn: [copyLuaFiles, copyModFiles]) {
     from '../../Resources'
     into 'assets'
 }

@@ -2,7 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 include $(CLEAR_VARS)
 
-LOCAL_MODULE := cocos2dcpp_shared
+LOCAL_MODULE := cocos2dcpp
 
 LOCAL_MODULE_FILENAME := libcocos2dcpp
 
@@ -27,6 +27,8 @@ LOCAL_SRC_FILES := narutosenki/main.cpp \
 		../../../Classes/PauseLayer.cpp \
 		../../../Classes/SelectLayer.cpp \
 		../../../Classes/StartMenu.cpp \
+		../../../Classes/GameLoginHttp.cpp \
+		../../../Classes/Mods/ModRegistry.cpp \
 		../../../Classes/MyUtils/CCScrewLayer.cpp \
 		../../../Classes/MyUtils/CCShake.cpp \
 		../../../Classes/MyUtils/CCStrokeLabel.cpp \

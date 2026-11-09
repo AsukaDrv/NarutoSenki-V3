@@ -35,7 +35,10 @@ function SelectLayer:init()
 
     self._playerSelect = nil
     self.selectHero = nil
-    self.isNetworkMode = _G.__networkMatchId ~= nil
+    -- Mabar lokal (WiFi LAN / Hotspot / Bluetooth): host/client via Lua link API
+    self.isLocalMabar = _G.__localMabarActive == true
+    self._mabarIsHost = (_G.__localMabarRole == 'host')
+    self.isNetworkMode = _G.__networkMatchId ~= nil or self.isLocalMabar
     self._networkVsBot = self.isNetworkMode and (_G.__networkVsBot == true)
     _G.__networkVsBot = nil
     self._remoteHero = nil
@@ -56,9 +59,9 @@ function SelectLayer:init()
 
     -- if CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID then
     -- if not KTools:checkMD5() then
-    -- 	SimpleAudioEngine:sharedEngine():stopBackgroundMusic()
-    -- 	CCDirector:sharedDirector():end()
-    -- 	return false
+    --  SimpleAudioEngine:sharedEngine():stopBackgroundMusic()
+    --  CCDirector:sharedDirector():end()
+    --  return false
     -- end
     -- end
 
@@ -267,6 +270,16 @@ function SelectLayer:init()
         menu:setAnchorPoint(0, 0)
         menu:setPosition(width - 40, 36)
         self:addChild(menu, 5)
+    elseif self.isLocalMabar and self._mabarIsHost then
+        -- Mabar lokal: hanya HOST yang punya tombol start (memulai kedua sisi)
+        local start_btn = ui.newImageMenuItem({
+            image = '#start_btn.png',
+            listener = function() self:onMabarHostStart() end
+        })
+        local menu = ui.newMenu({start_btn})
+        menu:setAnchorPoint(0, 0)
+        menu:setPosition(width - 40, 36)
+        self:addChild(menu, 5)
     end
 
     local skill_btn = ui.newImageMenuItem({
@@ -458,6 +471,8 @@ function SelectLayer:setSelected(btn)
     self:updateNetworkInfoLabel()
     if self.isNetworkMode and wsIsConnected() then
         wsSend('{"type":"select_update","hero":"' .. tostring(self.selectHero) .. '"}')
+    elseif self.isLocalMabar then
+        linkSend('{"type":"select_update","hero":"' .. tostring(self.selectHero) .. '"}')
     end
 
     local fd = CCFadeOut:create(1.0)
@@ -471,6 +486,8 @@ function SelectLayer:setSelected(btn)
             self:updateNetworkInfoLabel()
             if self.isNetworkMode and wsIsConnected() then
                 wsSend('{"type":"select_lock","hero":"' .. tostring(self._playerSelect) .. '"}')
+            elseif self.isLocalMabar then
+                linkSend('{"type":"select_lock","hero":"' .. tostring(self._playerSelect) .. '"}')
             end
 
             if not self.enableCustomSelect then
@@ -712,9 +729,57 @@ function SelectLayer:handleWebSocketEvent(eventName, payload)
         if seed then
             math.randomseed(seed)
         end
+    elseif messageType == 'mabar_start' then
+        -- Mabar lokal: HOST yang mengirim config start (map + hero kedua sisi)
+        if not self.isLocalMabar then return end
+        local delayMs = extractJsonNumberField(payload, 'delayMs') or 1500
+        self._networkStartDelay = delayMs / 1000
+        self._networkStartElapsed = 0
+        local mapId = extractJsonNumberField(payload, 'mapId') or 1
+        local hostHero = extractJsonStringField(payload, 'hostHero') or ''
+        local clientHero = extractJsonStringField(payload, 'clientHero') or ''
+        local yourHero, enemyHero, team
+        if self._mabarIsHost then
+            yourHero = hostHero
+            enemyHero = clientHero
+            team = 0
+        else
+            yourHero = clientHero
+            enemyHero = hostHero
+            team = 1
+        end
+        wsSetMatchConfig(mapId, team, yourHero, enemyHero, '', '', false, '', '')
+        if yourHero ~= '' then
+            self.selectHero = yourHero
+            self._playerSelect = yourHero
+            self._localLocked = true
+        end
+        if enemyHero ~= '' then
+            self._remoteHero = enemyHero
+            self._remoteLocked = true
+        end
+        self:updateNetworkInfoLabel()
     elseif messageType == 'opponent_left' then
         backToStartMenu()
     end
+end
+
+--- Host mabar lokal: kirim config start lalu mulai countdown kedua sisi.
+function SelectLayer:onMabarHostStart()
+    if not self.isLocalMabar or not self._mabarIsHost then return end
+    if not self._playerSelect then
+        self:autoPickRandomHero()
+    end
+    if not self._playerSelect then return end
+    local clientHero = self._remoteHero or 'Naruto'
+    local msg = '{"type":"mabar_start","mapId":1,"hostHero":"'
+        .. tostring(self._playerSelect) .. '","clientHero":"'
+        .. tostring(clientHero) .. '","delayMs":1500}'
+    linkSend(msg)
+    -- Terapkan config di sisi host juga
+    wsSetMatchConfig(1, 0, self._playerSelect, clientHero, '', '', false, '', '')
+    self._networkStartDelay = 1.5
+    self._networkStartElapsed = 0
 end
 
 function SelectLayer:noComSelect()

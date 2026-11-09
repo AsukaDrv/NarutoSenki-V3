@@ -1,0 +1,5 @@
+# Daftar mod aktif — satu nama folder per baris
+# Baris kosong dan '#' diabaikan.
+sample_hero
+survival
+ranked

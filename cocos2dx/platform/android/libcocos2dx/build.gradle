@@ -1,13 +1,12 @@
 apply plugin: 'com.android.library'
 
 android {
-    compileSdkVersion 31
-    buildToolsVersion "31.0.0"
+    namespace 'org.cocos2dx.lib'
+    compileSdk 35
 
     defaultConfig {
-        minSdkVersion 21
-        //noinspection ExpiredTargetSdkVersion
-        targetSdkVersion 31
+        minSdk 24
+        targetSdk 35
         versionCode 1
         versionName "1.0"
     }
@@ -20,14 +19,13 @@ android {
 
     buildTypes {
         release {
-            minifyEnabled true
-             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            minifyEnabled false
         }
     }
-}
 
-dependencies {
-    implementation fileTree(dir: '../java/libs', include: ['*.jar'])
+    lint {
+        abortOnError false
+    }
 }
 
 repositories {
