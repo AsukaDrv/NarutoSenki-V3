@@ -5,14 +5,14 @@ apply plugin: 'com.android.application'
 android {
     namespace 're.naruto.game'
     compileSdk 35
-    ndkVersion '27.1.12297006'
+    ndkVersion '27.2.12479018'
 
     defaultConfig {
         applicationId 're.naruto.game'
         minSdk 24
         targetSdk 35
-        versionCode 3
-        versionName '3.0'
+        versionCode 4
+        versionName "3.1"
 
         externalNativeBuild {
             if (PROP_BUILD_TYPE == 'ndk-build') {

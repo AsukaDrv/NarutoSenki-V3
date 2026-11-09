@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Fullscreen theme: menghilangkan TITLE BAR hitam "NarutoSenki" + status bar.
+     Ditambahkan karena activity sebelumnya pakai theme default sistem yang
+     menampilkan title bar di atas game (sangat mengganggu saat main). -->
+<resources>
+    <style name="NSFullscreenTheme" parent="@android:style/Theme.Black.NoTitleBar.Fullscreen">
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowFullscreen">true</item>
+        <item name="android:windowContentOverlay">@null</item>
+        <item name="android:windowBackground">@android:color/black</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+</resources>

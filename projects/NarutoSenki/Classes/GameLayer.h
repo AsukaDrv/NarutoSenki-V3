@@ -29,11 +29,11 @@
 
 enum class HeroSnapKind : uint8_t
 {
-	TowerClamp,
-	PeriodicCalmWalk,
-	PeriodicSkillCombat,
-	/** One-shot after attack/skill replication—no throttle (drops duplicate coordinates via last-send cache only). */
-	ImmediateBurst,
+        TowerClamp,
+        PeriodicCalmWalk,
+        PeriodicSkillCombat,
+        /** One-shot after attack/skill replication—no throttle (drops duplicate coordinates via last-send cache only). */
+        ImmediateBurst,
 };
 
 class BGLayer;
@@ -55,7 +55,7 @@ static GLFWwindow *_window = nullptr;
 
 inline GameLayer *getGameLayer()
 {
-	return _gLayer;
+        return _gLayer;
 }
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_MAC || CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
@@ -67,195 +67,202 @@ bool gameLayerIsApplyingPeerTowerDestroyFromNetwork();
 
 class GameLayer : public Layer
 {
-	using OnHUDInitializedCallback = std::function<void()>;
+        using OnHUDInitializedCallback = std::function<void()>;
 
-	friend class LoadLayer;
-	friend class BattleRuntimeSystem;
+        friend class LoadLayer;
+        friend class BattleRuntimeSystem;
 
 public:
-	GameLayer();
-	~GameLayer();
+        GameLayer();
+        ~GameLayer();
 
-	TMXTiledMap *currentMap;
-	CharacterBase *currentPlayer;
+        TMXTiledMap *currentMap;
+        CharacterBase *currentPlayer;
 
-	uint32_t _second;
-	uint32_t _minute;
-	int mapId;
+        uint32_t _second;
+        uint32_t _minute;
+        int mapId;
 
-	const char *kName;
-	const char *aName;
-	int kEXPBound;
-	int aEXPBound;
+        const char *kName;
+        const char *aName;
+        int kEXPBound;
+        int aEXPBound;
 
-	bool _isAttackButtonRelease;
-	bool _hasSpawnedGuardian;
-	/** Roshi/Han pick from last initGard (for WS tower_destroy / guardian sync). */
-	int _guardianPickIdx;
-	// int _guardianNum;
-	vector<Flog *> _KonohaFlogArray;
-	vector<Flog *> _AkatsukiFlogArray;
-	vector<Tower *> _TowerArray;
-	vector<Hero *> _CharacterArray;
+        bool _isAttackButtonRelease;
+        bool _hasSpawnedGuardian;
+        /** Roshi/Han pick from last initGard (for WS tower_destroy / guardian sync). */
+        int _guardianPickIdx;
+        // int _guardianNum;
+        vector<Flog *> _KonohaFlogArray;
+        vector<Flog *> _AkatsukiFlogArray;
+        vector<Tower *> _TowerArray;
+        vector<Hero *> _CharacterArray;
 
-	bool _isShacking;
+        bool _isShacking;
 
-	int _playNum;
-	void checkBackgroundMusic(float dt);
+        int _playNum;
+        void checkBackgroundMusic(float dt);
 
-	PROP(HudLayer *, _hudLayer, HudLayer);
-	void onHUDInitialized(const OnHUDInitializedCallback &callback);
-	bool isHUDInit();
-	void setTowerState(int charId);
+        PROP(HudLayer *, _hudLayer, HudLayer);
+        void onHUDInitialized(const OnHUDInitializedCallback &callback);
+        bool isHUDInit();
+        void setTowerState(int charId);
 
-	PROP_UInt(totalKills, TotalKills);
-	PROP_UInt(totalTime, TotalTime);
+        PROP_UInt(totalKills, TotalKills);
+        PROP_UInt(totalTime, TotalTime);
 
-	SpriteBatchNode *skillEffectBatch;
-	SpriteBatchNode *damageEffectBatch;
-	SpriteBatchNode *bulletBatch;
-	SpriteBatchNode *shadowBatch;
+        SpriteBatchNode *skillEffectBatch;
+        SpriteBatchNode *damageEffectBatch;
+        SpriteBatchNode *bulletBatch;
+        SpriteBatchNode *shadowBatch;
 
-	bool init();
-	void initTileMap();
-	void initHeros();
-	void initFlogs();
-	/** Online follower only: spawn one frog wave when Konoha peer sends flog_wave. */
-	void applyPeerFlogWaveFromNetwork(uint32_t waveSeq);
-	/** Online follower (Akatsuki): apply authoritative frog pose/HP CSV from Konoha (see flog_snap). */
-	void applyPeerFlogSnapFromNetwork(const std::string &dcsv);
-	void initTower();
-	/** @param guardianVariant Roshi vs Han: 0 or 1; -1 picks randomly (deterministic when synced online).
-	 * @param anchorTowerName When set (KonohaCenter / AkatsukiCenter), spawn uses world placement for that base — same on both peers (fixes online flip). */
-	void initGard(int guardianVariant = -1, bool notifyNetworkPeers = true, const std::string *anchorTowerName = nullptr);
-	void initEffects();
+        bool init();
+        void initTileMap();
+        void initHeros();
+        void initFlogs();
+        /** Online follower only: spawn one frog wave when Konoha peer sends flog_wave. */
+        void applyPeerFlogWaveFromNetwork(uint32_t waveSeq);
+        /** Online follower (Akatsuki): apply authoritative frog pose/HP CSV from Konoha (see flog_snap). */
+        void applyPeerFlogSnapFromNetwork(const std::string &dcsv);
+        void initTower();
+        /** @param guardianVariant Roshi vs Han: 0 or 1; -1 picks randomly (deterministic when synced online).
+         * @param anchorTowerName When set (KonohaCenter / AkatsukiCenter), spawn uses world placement for that base — same on both peers (fixes online flip). */
+        void initGard(int guardianVariant = -1, bool notifyNetworkPeers = true, const std::string *anchorTowerName = nullptr);
+        void initEffects();
 
-	void updateViewPoint(float dt);
-	void updateGameTime(float dt);
+        void updateViewPoint(float dt);
+        void updateGameTime(float dt);
 
-	Hero *addHero(const HeroData &data, int charId);
-	Hero *addHero(const string &name, Role role, Group group, Vec2 spawnPoint, int charNo);
-	void addFlog(float dt);
+        Hero *addHero(const HeroData &data, int charId);
+        Hero *addHero(const string &name, Role role, Group group, Vec2 spawnPoint, int charNo);
+        void addFlog(float dt);
 
-	void attackButtonClick(ABType type);
-	void gearButtonClick(GearType type);
-	void attackButtonRelease();
+        void attackButtonClick(ABType type);
+        void gearButtonClick(GearType type);
+        void attackButtonRelease();
 
-	void JoyStickRelease();
-	void JoyStickUpdate(Vec2 direction);
+        /** Recall (shunshin ke base): teleport hero balik ke spawn point
+         * supaya bisa nambah darah di base tanpa lari (fountain heal otomatis). */
+        void doRecall();
+        /** Teleport satu hero ke spawn point-nya + efek Hiraishin. Dipakai
+         * untuk recall lokal maupun echo dari peer (mabar/online). */
+        void teleportHeroToBase(CharacterBase *hero);
 
-	PROP(bool, _isSkillFinish, SkillFinish);
-	void checkTower();
+        void JoyStickRelease();
+        void JoyStickUpdate(Vec2 direction);
 
-	void onPause();
-	void resumeFromPause();
-	void onGear();
-	/** Pop gear shop scene; used locally and when mirroring remote close in network play. */
-	void dismissGearOverlay();
-	/** Online in-match pause/gear menu: suppress replication so stray touches/keys don't confuse the opponent. */
-	bool shouldBlockNetworkBattleInputEcho() const;
-	/** Broadcast local hero world position—tower edge, calm idle/walk (~4–5 Hz), or skill combat (~13 Hz capped). */
-	void sendNetworkOwnedHeroPositionSnapIfNeeded(const Vec2 &worldPos, HeroSnapKind kind);
-	/** Scheduled ~10 Hz; internal throttling reduces bandwidth while skills are active. */
-	void tickOnlineHeroPositionSnap(float dt);
-	/** Konoha authority: ~10 Hz broadcast frog pose + HP so follower mirrors realtime (no ghost hits). */
-	void tickOnlineFlogSnap(float dt);
-	/** Online: push HP / kill / death stats to peer (throttled unless force). */
-	void syncOnlineBattleStatsToPeer(bool force = false);
+        PROP(bool, _isSkillFinish, SkillFinish);
+        void checkTower();
 
-	void playGameOpeningAnimation(float dt);
-	void onGameStart(float dt);
-	void onGameOver(bool isWin);
+        void onPause();
+        void resumeFromPause();
+        void onGear();
+        /** Pop gear shop scene; used locally and when mirroring remote close in network play. */
+        void dismissGearOverlay();
+        /** Online in-match pause/gear menu: suppress replication so stray touches/keys don't confuse the opponent. */
+        bool shouldBlockNetworkBattleInputEcho() const;
+        /** Broadcast local hero world position—tower edge, calm idle/walk (~4–5 Hz), or skill combat (~13 Hz capped). */
+        void sendNetworkOwnedHeroPositionSnapIfNeeded(const Vec2 &worldPos, HeroSnapKind kind);
+        /** Scheduled ~10 Hz; internal throttling reduces bandwidth while skills are active. */
+        void tickOnlineHeroPositionSnap(float dt);
+        /** Konoha authority: ~10 Hz broadcast frog pose + HP so follower mirrors realtime (no ghost hits). */
+        void tickOnlineFlogSnap(float dt);
+        /** Online: push HP / kill / death stats to peer (throttled unless force). */
+        void syncOnlineBattleStatsToPeer(bool force = false);
 
-	void updateHudSkillButtons();
-	void setHPLose(float percent);
-	void setCKRLose(bool isCRK2);
+        void playGameOpeningAnimation(float dt);
+        void onGameStart(float dt);
+        void onGameOver(bool isWin);
 
-	void setReport(const string &slayer, const string &dead, uint32_t killNum);
-	void clearDoubleClick();
-	void resetStatusBar();
-	void setCoin(const char *value);
-	void removeOugisMark(int type);
-	void setOugis(CharacterBase *sender);
-	void removeOugis();
+        void updateHudSkillButtons();
+        void setHPLose(float percent);
+        void setCKRLose(bool isCRK2);
 
-	CharacterBase *ougisChar;
-	CharacterBase *controlChar;
-	Layer *blend;
+        void setReport(const string &slayer, const string &dead, uint32_t killNum);
+        void clearDoubleClick();
+        void resetStatusBar();
+        void setCoin(const char *value);
+        void removeOugisMark(int type);
+        void setOugis(CharacterBase *sender);
+        void removeOugis();
 
-	void onLeft();
+        CharacterBase *ougisChar;
+        CharacterBase *controlChar;
+        Layer *blend;
 
-	bool _isSurrender;
+        void onLeft();
 
-	bool _enableGear;
-	bool _isOugis2Game;
-	bool _isHardCoreGame;
-	bool _isRandomChar;
+        bool _isSurrender;
 
-	Group playerGroup;
-	bool _isStarted;
-	bool _isExiting;
-	bool _hasGameOverTriggered;
+        bool _enableGear;
+        bool _isOugis2Game;
+        bool _isHardCoreGame;
+        bool _isRandomChar;
 
-	const char *getGuardianGroup()
-	{
-		return playerGroup == Group::Konoha ? TowerEnum::AkatsukiCenter : TowerEnum::KonohaCenter;
-	}
+        Group playerGroup;
+        bool _isStarted;
+        bool _isExiting;
+        bool _hasGameOverTriggered;
 
-	bool _isGear;
-	bool _isPause;
-	GearLayer *_gearLayer;
-	PauseLayer *_pauseLayer;
-	/** Local/offline: gear UI uses pushScene; online Mac overlay uses addChild on running scene. */
-	bool _gearOpenedWithPushScene;
-	/** Same distinction as gear for pause menu. */
-	bool _pauseOpenedWithPushScene;
+        const char *getGuardianGroup()
+        {
+                return playerGroup == Group::Konoha ? TowerEnum::AkatsukiCenter : TowerEnum::KonohaCenter;
+        }
 
-	void clearAllFlogsMainTarget(CharacterBase *target);
-	void clearAllUnitsMainTarget(CharacterBase *target);
+        bool _isGear;
+        bool _isPause;
+        GearLayer *_gearLayer;
+        PauseLayer *_pauseLayer;
+        /** Local/offline: gear UI uses pushScene; online Mac overlay uses addChild on running scene. */
+        bool _gearOpenedWithPushScene;
+        /** Same distinction as gear for pause menu. */
+        bool _pauseOpenedWithPushScene;
 
-	CREATE_FUNC(GameLayer);
-	static bool checkHasAnyMovement();
-	static int getMapCount();
+        void clearAllFlogsMainTarget(CharacterBase *target);
+        void clearAllUnitsMainTarget(CharacterBase *target);
+
+        CREATE_FUNC(GameLayer);
+        static bool checkHasAnyMovement();
+        static int getMapCount();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX || CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
-	static void keyEventHandle(GLFWwindow *window, int key, int scancode, int action, int modes);
+        static void keyEventHandle(GLFWwindow *window, int key, int scancode, int action, int modes);
 #elif (CC_TARGET_PLATFORM == CC_PLATFORM_MAC)
-	static void keyEventHandle(int key, int keyState);
+        static void keyEventHandle(int key, int keyState);
 #endif
 
 private:
-	void onEnter();
-	void onExit();
+        void onEnter();
+        void onExit();
 
-	void setKeyEventHandler();
-	void removeKeyEventHandler();
+        void setKeyEventHandler();
+        void removeKeyEventHandler();
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_LINUX || CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
-	int _lastPressedMovementKey;
+        int _lastPressedMovementKey;
 #elif (CC_TARGET_PLATFORM == CC_PLATFORM_MAC)
-	int _lastPressedMovementKey;
+        int _lastPressedMovementKey;
 #endif
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
-	static void LPFN_ACCELEROMETER_KEYHOOK(UINT message, WPARAM wParam, LPARAM lParam);
+        static void LPFN_ACCELEROMETER_KEYHOOK(UINT message, WPARAM wParam, LPARAM lParam);
 #endif
 
-	void invokeAllCallbacks();
+        void invokeAllCallbacks();
 
-	void spawnFlogWave(uint32_t waveSeq);
+        void spawnFlogWave(uint32_t waveSeq);
 
-	inline Vec2 getCustomSpawnPoint(HeroData &data);
+        inline Vec2 getCustomSpawnPoint(HeroData &data);
 
-	bool isHUDInitialized = false;
-	bool is4V4Mode = false;
-	vector<OnHUDInitializedCallback> callbackssList;
+        bool isHUDInitialized = false;
+        bool is4V4Mode = false;
+        vector<OnHUDInitializedCallback> callbackssList;
 
-	std::unique_ptr<BattleRuntimeSystem> _battleRuntimeSystem;
-	std::unique_ptr<SpawnSystem> _spawnSystem;
-	std::unique_ptr<SessionState> _sessionState;
+        std::unique_ptr<BattleRuntimeSystem> _battleRuntimeSystem;
+        std::unique_ptr<SpawnSystem> _spawnSystem;
+        std::unique_ptr<SessionState> _sessionState;
 
-	/** Increments each spawned frog wave (offline + online); tags frogs for network CSV sync. */
-	uint32_t _flogWaveSeqCounter = 0;
+        /** Increments each spawned frog wave (offline + online); tags frogs for network CSV sync. */
+        uint32_t _flogWaveSeqCounter = 0;
 };
 
 #define BIND(funcName) std::bind(&funcName, this)

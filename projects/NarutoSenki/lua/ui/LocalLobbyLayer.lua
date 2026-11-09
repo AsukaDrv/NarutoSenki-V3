@@ -43,6 +43,11 @@ function LocalLobbyLayer:ctor()
     self._deviceIndex = 1
     self._roomIndex = 1
     self._startingAsHost = false
+    self._connectingRoom = false    -- cegah lanJoin berulang tiap beacon
+    self._btConnecting = false      -- cegah btConnect berulang tiap event scan
+    self._seenRoomKeys = {}         -- dedup beacon room
+    self._seenBtAddrs = {}          -- dedup device bluetooth
+    self._joined = false            -- sudah terima 'open'
     self:init()
     _G.__localLobbyLayer = self
 end
@@ -177,6 +182,22 @@ function LocalLobbyLayer:setActionButtonsVisible(visible)
     if self.joinMenu then self.joinMenu:setVisible(visible) end
 end
 
+--- Tampilkan daftar room/device (maks 3) di baris info agar user lihat hasil scan.
+function LocalLobbyLayer:setListSummary(items, prefix)
+    if type(items) ~= 'table' or #items == 0 then
+        self:setInfo(prefix .. ' (kosong)')
+        return
+    end
+    local parts = {}
+    local max = math.min(#items, 3)
+    for i = 1, max do
+        parts[#parts + 1] = tostring(items[i].label or items[i].name or '?')
+    end
+    local text = prefix .. ': ' .. table.concat(parts, ', ')
+    if #items > 3 then text = text .. ' +' .. (#items - 3) end
+    self:setInfo(text)
+end
+
 -- ------------------------------------------------------------------
 -- Transport picking
 -- ------------------------------------------------------------------
@@ -222,6 +243,7 @@ end
 -- ------------------------------------------------------------------
 function LocalLobbyLayer:onHostPressed()
     if not self.transport then return end
+    if self._joined or self._startingAsHost then return end
 
     if self.transport == 'bluetooth' then
         self.isHost = true
@@ -259,13 +281,15 @@ end
 
 function LocalLobbyLayer:onScanPressed()
     if not self.transport then return end
+    if self._joined or self._connectingRoom or self._btConnecting then return end
 
     if self.transport == 'bluetooth' then
         self:setStatus('Scan bluetooth...')
-        self:setInfo('Tekan SCAN lagi untuk connect ke device pertama.')
+        self:setInfo('Device pertama yang ketemu otomatis di-connect.')
+        self._seenBtAddrs = {}
+        self._deviceIndex = 1
         btScanStop()
         btScan()
-        self._deviceIndex = 1
         return
     end
 
@@ -274,6 +298,8 @@ function LocalLobbyLayer:onScanPressed()
         self:setInfo('Pastikan WiFi sudah tersambung ke hotspot host!')
     end
     self:setStatus('Mencari room...')
+    self._seenRoomKeys = {}
+    self._connectingRoom = false
     lanScanStop()
     lanScan()
 end
@@ -322,13 +348,17 @@ function LocalLobbyLayer:handleWebSocketEvent(eventName, payload)
         return
     end
     if eventName == 'open' then
-        -- koneksi TCP/BT established
+        -- koneksi TCP/BT established.
+        -- PENTING: JANGAN linkStop() di sini! linkStop mematikan TcpLink /
+        -- BluetoothLink / Hotspot yang justru dibutuhkan selama match
+        -- (bug lama: koneksi langsung mati saat masuk pilih karakter).
+        -- Cukup matikan scan/beacon agar tidak menerima room baru.
+        if self._joined then return end
+        self._joined = true
         self.isConnected = true
         local transportLabel = (self.transport == 'bluetooth') and 'Bluetooth' or 'WiFi'
         self:setStatus('Tersambung (' .. transportLabel .. ')!')
         self:setInfo('Masuk ke pemilihan karakter...')
-        linkStop()
-        -- matikan beacon/scan agar tidak menerima room baru
         lanScanStop()
         btScanStop()
         _G.__localMabarActive = true
@@ -341,13 +371,18 @@ function LocalLobbyLayer:handleWebSocketEvent(eventName, payload)
         if not self.isConnected then
             self:setStatus('Gagal: ' .. tostring(payload or eventName))
         end
+        -- reset status agar user bisa retry tanpa harus keluar lobby
         self.isConnected = false
+        self._connectingRoom = false
+        self._btConnecting = false
+        self._startingAsHost = false
         return
     end
 end
 
 function LocalLobbyLayer:handleRoomsFound(payload)
     -- payload: JSON array [{"name","host_ip","port","players","max"}]
+    if self._joined or self._connectingRoom or self.isHost then return end
     local rooms = {}
     for ip, name in string.gmatch(tostring(payload or ''),
             '"host_ip"%s*:%s*"([^"]+)"[^{]-"name"%s*:%s*"([^"]+)"') do
@@ -364,9 +399,21 @@ function LocalLobbyLayer:handleRoomsFound(payload)
         self:setStatus('Tidak ada room')
         return
     end
+    -- dedup: beacon dikirim tiap 1 detik, jangan connect ulang ke room yang sama
+    local fresh = {}
+    for _, room in ipairs(rooms) do
+        local key = room.ip .. '|' .. room.name
+        if not self._seenRoomKeys[key] then
+            self._seenRoomKeys[key] = true
+            fresh[#fresh + 1] = room
+        end
+    end
+    if #fresh == 0 then return end
     self.rooms = rooms
-    local room = rooms[1]
-    self:setStatus('Room: ' .. room.name)
+    self:setListSummary(rooms, 'Room ketemu')
+    local room = fresh[1]
+    self._connectingRoom = true
+    self:setStatus('Masuk room: ' .. room.name)
     self:setInfo('Connect ke ' .. room.ip .. ':' .. MABAR_PORT)
     lanScanStop()
     lanJoin(room.ip, MABAR_PORT)
@@ -374,22 +421,28 @@ end
 
 function LocalLobbyLayer:handleBtDevices(payload)
     -- payload: JSON array [{"addr","name","paired"}]
+    if self._joined or self._btConnecting then return end
     local devices = {}
     for addr, name in string.gmatch(tostring(payload or ''),
             '"addr"%s*:%s*"([^"]+)"[^{]-"name"%s*:%s*"([^"]*)"') do
-        if addr and addr ~= '' then
-            devices[#devices + 1] = {addr = addr, name = name}
+        if addr and addr ~= '' and not self._seenBtAddrs[addr] then
+            self._seenBtAddrs[addr] = true
+            devices[#devices + 1] = {addr = addr, name = name ~= '' and name or addr}
         end
     end
     if #devices == 0 then
-        self:setStatus('Tidak ada device')
+        self:setStatus('Tidak ada device baru')
         return
     end
-    self.devices = devices
-    local device = devices[math.min(self._deviceIndex, #devices)]
-    self:setStatus('Device: ' .. device.name)
-    self:setInfo('Connect ke ' .. device.addr)
-    btScanStop()
+    for _, dev in ipairs(devices) do
+        self.devices[#self.devices + 1] = dev
+    end
+    self:setListSummary(self.devices, 'BT ketemu')
+    local device = devices[1]
+    self._btConnecting = true
     self._deviceIndex = self._deviceIndex + 1
+    self:setStatus('Connect: ' .. device.name)
+    self:setInfo('Pairing bila diminta... (' .. device.addr .. ')')
+    btScanStop()
     btConnect(device.addr)
 end

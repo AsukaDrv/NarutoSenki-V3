@@ -7,6 +7,10 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.KeyEvent;
+import android.view.View;
+import android.view.Window;
+import android.view.WindowInsets;
+import android.view.WindowInsetsController;
 import android.view.WindowManager;
 
 import androidx.core.app.ActivityCompat;
@@ -71,6 +75,55 @@ public class NarutoSenki extends Cocos2dxActivity {
                 BluetoothLink.setAppContext(getApplicationContext());
                 getWindow().setFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON,
                                 WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+                applyImmersiveMode();
+        }
+
+        /**
+         * Fullscreen penuh: hilangkan TITLE BAR hitam "NarutoSenki", status bar
+         * (jam/baterai) dan navigation bar yang menutupi area game.
+         * Dipanggil ulang setiap window mendapat fokus (onWindowFocusChanged)
+         * agar bar tidak muncul kembali setelah dialog/notifikasi.
+         */
+        private void applyImmersiveMode() {
+                try {
+                        final Window window = getWindow();
+                        if (Build.VERSION.SDK_INT >= 28) {
+                                WindowManager.LayoutParams lp = window.getAttributes();
+                                lp.layoutInDisplayCutoutMode =
+                                                WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
+                                window.setAttributes(lp);
+                        }
+                        final View decor = window.getDecorView();
+                        if (Build.VERSION.SDK_INT >= 30) {
+                                window.setDecorFitsSystemWindows(false);
+                                final WindowInsetsController controller = window.getInsetsController();
+                                if (controller != null) {
+                                        controller.setSystemBarsBehavior(
+                                                        WindowInsetsController.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE);
+                                        controller.hide(WindowInsets.Type.statusBars()
+                                                        | WindowInsets.Type.navigationBars()
+                                                        | WindowInsets.Type.captionBar());
+                                }
+                        } else {
+                                decor.setSystemUiVisibility(
+                                                View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                                                                | View.SYSTEM_UI_FLAG_FULLSCREEN
+                                                                | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                                                                | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                                                                | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                                                                | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+                        }
+                } catch (Exception e) {
+                        Log.w(TAG, "applyImmersiveMode failed", e);
+                }
+        }
+
+        @Override
+        public void onWindowFocusChanged(boolean hasFocus) {
+                super.onWindowFocusChanged(hasFocus);
+                if (hasFocus) {
+                        applyImmersiveMode();
+                }
         }
 
         public Cocos2dxGLSurfaceView onCreateGLSurfaceView() {

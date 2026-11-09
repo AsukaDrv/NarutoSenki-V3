@@ -8,153 +8,162 @@
 class MiniIcon : public Sprite
 {
 public:
-	MiniIcon();
-	~MiniIcon();
+        MiniIcon();
+        ~MiniIcon();
 
-	bool init(const char *szImage, bool isNotification);
+        bool init(const char *szImage, bool isNotification);
 
-	PROP(int, _charId, CharId);
+        PROP(int, _charId, CharId);
 
-	void updateMap(Ref *sender);
-	void updateState();
-	void updatePosition(Vec2 location);
+        void updateMap(Ref *sender);
+        void updateState();
+        void updatePosition(Vec2 location);
 
-	static MiniIcon *create(const char *szImage, bool isNotification);
+        static MiniIcon *create(const char *szImage, bool isNotification);
 
-	Layer *_delegate = nullptr;
+        Layer *_delegate = nullptr;
 };
 
 struct ReportData
 {
-	string slayer;
-	string dead;
-	int char1Id = 0;
-	uint32_t num = 0;
-	uint32_t kills = 0;
+        string slayer;
+        string dead;
+        int char1Id = 0;
+        uint32_t num = 0;
+        uint32_t kills = 0;
 
-	bool isDisplay = false;
+        bool isDisplay = false;
 };
 
 class HudLayer : public Layer
 {
 public:
-	HudLayer();
+        HudLayer();
 
-	Sprite *status_bar;
-	Sprite *status_hpbar;
-	Sprite *status_hpMark;
-	ProgressTimer *status_expbar;
+        Sprite *status_bar;
+        Sprite *status_hpbar;
+        Sprite *status_hpMark;
+        ProgressTimer *status_expbar;
 
-	ActionButton *nAttackButton;
-	ActionButton *skill1Button;
-	ActionButton *skill2Button;
-	ActionButton *skill3Button;
-	ActionButton *skill4Button;
-	ActionButton *skill5Button;
+        ActionButton *nAttackButton;
+        ActionButton *skill1Button;
+        ActionButton *skill2Button;
+        ActionButton *skill3Button;
+        ActionButton *skill4Button;
+        ActionButton *skill5Button;
 
-	ActionButton *item1Button;
-	PROP_PTR(ActionButton, item2Button, Item2Button);
-	PROP_PTR(ActionButton, item3Button, Item3Button);
-	PROP_PTR(ActionButton, item4Button, Item4Button);
+        ActionButton *item1Button;
+        PROP_PTR(ActionButton, item2Button, Item2Button);
+        PROP_PTR(ActionButton, item3Button, Item3Button);
+        PROP_PTR(ActionButton, item4Button, Item4Button);
 
-	MenuItemSprite *gearMenuSprite;
-	ActionButton *gear1Button;
-	ActionButton *gear2Button;
-	ActionButton *gear3Button;
-	Sprite *reportSprite;
-	Sprite *reportSPCSprite;
+        MenuItemSprite *gearMenuSprite;
+        ActionButton *gear1Button;
+        ActionButton *gear2Button;
+        ActionButton *gear3Button;
+        Sprite *reportSprite;
+        Sprite *reportSPCSprite;
 
-	int _buffCount = 0;
+        int _buffCount = 0;
 
-	CCLabelBMFont *hpLabel;
-	CCLabelBMFont *expLabel;
+        CCLabelBMFont *hpLabel;
+        CCLabelBMFont *expLabel;
 
-	CCLabelBMFont *coinLabel;
-	CCLabelBMFont *killLabel;
-	CCLabelBMFont *deadLabel;
+        CCLabelBMFont *coinLabel;
+        CCLabelBMFont *killLabel;
+        CCLabelBMFont *deadLabel;
 
-	CCLabelBMFont *KonoLabel;
-	CCLabelBMFont *AkaLabel;
+        CCLabelBMFont *KonoLabel;
+        CCLabelBMFont *AkaLabel;
 
-	CCLabelBMFont *gameClock;
-	CCLabelBMFont *pingLabel;
-	Menu *pauseNenu;
-	Menu *gearMenu;
+        CCLabelBMFont *gameClock;
+        CCLabelBMFont *pingLabel;
+        Menu *pauseNenu;
+        Menu *gearMenu;
 
-	Layer *miniLayer;
-	JoyStick *_joyStick;
+        Layer *miniLayer;
+        JoyStick *_joyStick;
 
-	Texture2D *texUI;
-	SpriteBatchNode *uiBatch;
+        /** Recall (shunshin ke base) */
+        Menu *recallMenu = nullptr;
+        MenuItemSprite *recallMenuItem = nullptr;
+        CCLabelBMFont *recallCdLabel = nullptr;
+        float _recallCdRemain = 0.f;
+        void onRecallClick(Ref *sender);
+        void startRecallCooldown();
+        void updateRecallCooldown(float dt);
 
-	void setHPLose(float percent);
-	void setCKRLose(bool isCRK2);
-	void setEXPLose();
+        Texture2D *texUI;
+        SpriteBatchNode *uiBatch;
 
-	void initHeroInterface();
-	void attackButtonClick(ABType type);
-	void gearButtonClick(GearType type);
-	void attackButtonRelease();
-	void pauseButtonClick(Ref *sender);
-	void gearButtonClick(Ref *sender);
-	void setReport(const string &slayer, const string &dead, uint32_t killNum);
-	void setReportCache();
-	void setBuffDisplay(const char *buffName, float buffStayTime);
-	void clearSPCReport();
-	void clearBuffDisplay(Sprite *bs);
+        void setHPLose(float percent);
+        void setCKRLose(bool isCRK2);
+        void setEXPLose();
 
-	void updateBuffDisplay(float dt);
-	void updateBuffDisplay2(float dt);
-	void stopSPCReport();
-	void updateSPCReprot(float dt);
-	void setTowerState(int charId);
-	void playGameOpeningAnimation();
+        void initHeroInterface();
+        void attackButtonClick(ABType type);
+        void gearButtonClick(GearType type);
+        void attackButtonRelease();
+        void pauseButtonClick(Ref *sender);
+        void gearButtonClick(Ref *sender);
+        void setReport(const string &slayer, const string &dead, uint32_t killNum);
+        void setReportCache();
+        void setBuffDisplay(const char *buffName, float buffStayTime);
+        void clearSPCReport();
+        void clearBuffDisplay(Sprite *bs);
 
-	CCLabelBMFont *bcdLabel1;
-	CCLabelBMFont *bcdLabel2;
+        void updateBuffDisplay(float dt);
+        void updateBuffDisplay2(float dt);
+        void stopSPCReport();
+        void updateSPCReprot(float dt);
+        void setTowerState(int charId);
+        void playGameOpeningAnimation();
 
-	void JoyStickRelease();
-	void JoyStickUpdate(Vec2 direction);
-	Sprite *openingSprite;
+        CCLabelBMFont *bcdLabel1;
+        CCLabelBMFont *bcdLabel2;
 
-	Sprite *createReport(const string &slayer, const string &dead, float &length);
-	Sprite *createSPCReport(uint32_t killNum, int num);
+        void JoyStickRelease();
+        void JoyStickUpdate(Vec2 direction);
+        Sprite *openingSprite;
 
-	bool getSkillFinish();
-	bool getOugisEnable(bool isCKR2);
+        Sprite *createReport(const string &slayer, const string &dead, float &length);
+        Sprite *createSPCReport(uint32_t killNum, int num);
 
-	Layer *ougisLayer;
-	void setOugis(const string &name, Group group);
-	void removeOugis();
+        bool getSkillFinish();
+        bool getOugisEnable(bool isCKR2);
 
-	bool _isAllButtonLocked;
+        Layer *ougisLayer;
+        void setOugis(const string &name, Group group);
+        void removeOugis();
 
-	void addMapIcon();
-	void setOnlinePingMs(int ms);
-	void tickOnlinePingLatency(float dt);
+        bool _isAllButtonLocked;
 
-	void costCKR(uint32_t value, bool isCKR2);
-	void setCoin(const char *value);
-	bool offCoin(const char *value);
+        void addMapIcon();
+        void setOnlinePingMs(int ms);
+        void tickOnlinePingLatency(float dt);
 
-	bool init();
+        void costCKR(uint32_t value, bool isCKR2);
+        void setCoin(const char *value);
+        bool offCoin(const char *value);
 
-	void updateGears();
-	void initGearButton(const string &charName);
+        bool init();
 
-	void initSkillButtons();
-	void setSkillButtons(bool isVisable);
-	void updateSkillButtons();
-	void updateSpecialSkillButtons();
-	void resetSkillButtons();
+        void updateGears();
+        void initGearButton(const string &charName);
 
-	CREATE_FUNC(HudLayer);
+        void initSkillButtons();
+        void setSkillButtons(bool isVisable);
+        void updateSkillButtons();
+        void updateSpecialSkillButtons();
+        void resetSkillButtons();
+
+        CREATE_FUNC(HudLayer);
 
 private:
-	void onEnter();
-	void onExit();
+        void onEnter();
+        void onExit();
 
-	bool _isInitPlayerHud = false;
-	vector<ReportData> _reportListArray;
-	vector<MiniIcon *> _towerIconArray;
+        bool _isInitPlayerHud = false;
+        vector<ReportData> _reportListArray;
+        vector<MiniIcon *> _towerIconArray;
 };
