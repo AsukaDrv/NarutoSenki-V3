@@ -101,23 +101,40 @@ function NetworkLobbyLayer:init()
     menu_bar_t:fullScreen()
     self:addChild(menu_bar_t, 2)
 
+    -- Judul (emas) + panel status agar teks mudah dibaca
+    local lobbyTitle = ui.newTTFLabelWithShadow({
+        text = 'MABAR ONLINE',
+        size = 22,
+        x = display.cx,
+        y = display.height - 26,
+        align = ui.TEXT_ALIGN_CENTER
+    })
+    lobbyTitle:setColor(ccc3(255, 214, 90))
+    self:addChild(lobbyTitle, 5)
+
+    local statusPanel = CCLayerColor:create(ccc4(8, 8, 16, 140), 240, 64)
+    statusPanel:setPosition(display.cx - 120, display.cy - 40)
+    self:addChild(statusPanel, 3)
+
     -- Teks dipusatkan: simetris di sekitar tengah layar (vertikal + horizontal).
     self.statusLabel = ui.newTTFLabelWithShadow({
         text = 'Status: Disconnected',
-        size = 18,
+        size = 16,
         x = display.cx,
-        y = display.cy + 16,
+        y = display.cy + 10,
         align = ui.TEXT_ALIGN_CENTER
     })
+    self.statusLabel:setColor(ccc3(240, 240, 240))
     self:addChild(self.statusLabel, 5)
 
     self.messageLabel = ui.newTTFLabelWithShadow({
         text = 'Click start to find a match',
-        size = 14,
+        size = 12,
         x = display.cx,
         y = display.cy - 16,
         align = ui.TEXT_ALIGN_CENTER
     })
+    self.messageLabel:setColor(ccc3(185, 185, 185))
     self:addChild(self.messageLabel, 5)
 
     self:scheduleUpdateWithPriorityLua(handler(self, NetworkLobbyLayer.update), 0)

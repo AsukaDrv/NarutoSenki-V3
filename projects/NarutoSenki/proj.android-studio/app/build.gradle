@@ -11,8 +11,8 @@ android {
         applicationId 're.naruto.game'
         minSdk 24
         targetSdk 35
-        versionCode 5
-        versionName "3.1.1"
+        versionCode 6
+        versionName "3.1.2"
 
         externalNativeBuild {
             if (PROP_BUILD_TYPE == 'ndk-build') {

@@ -146,7 +146,13 @@ function SelectLayer:init()
     local hero = 'Naruto'
     self._artCenter = CCPoint(panelX + 176 * panelScale / 2,
                               panelBottom + 200 * panelScale / 2)
-    self._nameY = panelBottom + 200 * panelScale + 2
+    -- Posisi nama karakter: DI BAWAH panel (mode art besar) atau di dalam
+    -- dasar panel (mode 3v3/4v4) — tidak lagi menumpuk judul di kiri atas.
+    if self._bigArtMode then
+        self._nameY = panelBottom - 18
+    else
+        self._nameY = panelBottom + 12
+    end
 
     -- Mode kecil di atas panel
     local modeName = 'TRAINING'
@@ -167,13 +173,16 @@ function SelectLayer:init()
     elseif self.mode == GameMode.RandomDeathmatch then
         modeName = 'RANDOM DEATHMATCH'
     end
+    -- Label mode masuk kolom kiri-atas (di bawah judul & hint) supaya
+    -- tidak menabrak panel art / nama karakter.
     local modeLabel = ui.newTTFLabelWithShadow({
         text = modeName,
-        size = 11,
-        x = self._artCenter.x,
-        y = panelBottom - 12,
-        align = ui.TEXT_ALIGN_CENTER
+        size = 12,
+        x = 14,
+        y = height - 62,
+        align = ui.TEXT_ALIGN_LEFT
     })
+    modeLabel:setColor(ccc3(255, 214, 90))
     self:addChild(modeLabel, 6)
 
     -- ------------------------------------------------------------------
@@ -361,7 +370,7 @@ function SelectLayer:init()
     })
     local menu = ui.newMenu({start_btn})
     menu:setAnchorPoint(0, 0)
-    menu:setPosition(width - 44, 36)
+    menu:setPosition(width - 44, 54)
     self:addChild(menu, 5)
     -- Mabar lokal: hanya HOST yang boleh memulai kedua sisi
     if self.isNetworkMode and not (self.isLocalMabar and self._mabarIsHost) then
@@ -374,7 +383,7 @@ function SelectLayer:init()
     })
     local menu2 = ui.newMenu({skill_btn})
     menu2:setAnchorPoint(0, 0)
-    menu2:setPosition(width - 36, 104)
+    menu2:setPosition(width - 36, 118)
     self:addChild(menu2, 5)
 
     local ranking_btn = ui.newImageMenuItem({
@@ -497,7 +506,7 @@ function SelectLayer:updateBigArt(charName)
     if hasFrame(charName .. '_font.png') then
         local fontArt = display.newSprite('#' .. charName .. '_font.png',
                                           self._artCenter.x,
-                                          self._artCenter.y + 105)
+                                          self._nameY)
         fontArt:setAnchorPoint(0.5, 0)
         fontArt:setScale(0.62)
         self:addChild(fontArt, 6)
@@ -507,7 +516,7 @@ function SelectLayer:updateBigArt(charName)
             text = charName,
             size = 15,
             x = self._artCenter.x,
-            y = self._artCenter.y + 100,
+            y = self._nameY - 8,
             align = ui.TEXT_ALIGN_CENTER
         })
         label:setColor(ccc3(232, 176, 58))
@@ -543,12 +552,14 @@ function SelectLayer:initCustomSelectMode()
     log('Initial Custom Select Mode...')
     local teamSelector = display.newLayer()
 
-    local teamBg = display.newSprite('#team_bg.png', 0, 185)
+    -- Baris slot COM dinaikkan ke atas panel (y lama 185/194 menabrak
+    -- panel art besar & nama karakter di UI Storm 4).
+    local teamBg = display.newSprite('#team_bg.png', 0, 198)
     teamBg:setAnchorPoint(0, 0)
     teamSelector:addChild(teamBg)
 
     -- init com selector 1
-    local comSelector1 = display.newSprite('#unknow_select.png', 2, 194)
+    local comSelector1 = display.newSprite('#unknow_select.png', 2, 207)
     comSelector1:setAnchorPoint(0, 0)
     teamSelector:addChild(comSelector1)
     self._comSelector1 = comSelector1

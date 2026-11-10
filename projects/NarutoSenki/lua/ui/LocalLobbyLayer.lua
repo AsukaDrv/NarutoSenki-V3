@@ -73,53 +73,80 @@ function LocalLobbyLayer:init()
     barBottom:fullScreen()
     self:addChild(barBottom, 2)
 
-    -- Judul
+    -- Judul (emas, ala Storm 4)
     local title = ui.newTTFLabelWithShadow({
         text = 'MABAR LOKAL',
-        size = 20,
+        size = 22,
         x = display.cx,
         y = display.height - 26,
         align = ui.TEXT_ALIGN_CENTER
     })
+    title:setColor(ccc3(255, 214, 90))
     self:addChild(title, 5)
+
+    -- Panel status di tengah-atas (latar gelap biar teks mudah dibaca)
+    local statusPanel = CCLayerColor:create(ccc4(8, 8, 16, 150), display.width - 180, 56)
+    statusPanel:setPosition(90, display.height - 96)
+    self:addChild(statusPanel, 3)
 
     -- Status (baris 1) & info (baris 2)
     self.statusLabel = ui.newTTFLabelWithShadow({
         text = 'Pilih mode mabar:',
         size = 14,
         x = display.cx,
-        y = display.cy + 30,
+        y = display.height - 58,
         align = ui.TEXT_ALIGN_CENTER
     })
+    self.statusLabel:setColor(ccc3(240, 240, 240))
     self:addChild(self.statusLabel, 5)
 
     self.infoLabel = ui.newTTFLabelWithShadow({
         text = '',
-        size = 12,
+        size = 10,
         x = display.cx,
-        y = display.cy + 8,
+        y = display.height - 80,
         align = ui.TEXT_ALIGN_CENTER
     })
+    self.infoLabel:setColor(ccc3(185, 185, 185))
     self:addChild(self.infoLabel, 5)
 
     self:setStatus('Pilih mode mabar:')
     self:setInfo('WiFi LAN: satu jaringan | Hotspot: satu HP jadi AP | Bluetooth: dekat')
 
-    -- Pilihan transport (kiri)
+    -- Panel mode (kiri): header + 4 pilihan transport
+    -- CATATAN: ui.newTTFLabelMenuItem membaca params.text (BUKAN params.label).
+    -- Bug lama: mengirim label= membuat teks jadi tostring(nil) = "nil".
+    local modePanel = CCLayerColor:create(ccc4(8, 8, 16, 140), 150, 168)
+    modePanel:setPosition(8, 26)
+    self:addChild(modePanel, 3)
+
+    local modeHeader = ui.newTTFLabelWithShadow({
+        text = 'PILIH MODE',
+        size = 13,
+        x = 83,
+        y = 176,
+        align = ui.TEXT_ALIGN_CENTER
+    })
+    modeHeader:setColor(ccc3(255, 214, 90))
+    self:addChild(modeHeader, 5)
+
+    local GOLD = ccc3(255, 214, 90)
+    local WHITE = ccc3(235, 235, 235)
     local btnDefs = {
-        {label = 'WiFi LAN',  y = display.cy + 44, cb = function() self:onPickLan() end},
-        {label = 'Hotspot',   y = display.cy + 12, cb = function() self:onPickHotspot() end},
-        {label = 'Bluetooth', y = display.cy - 20, cb = function() self:onPickBluetooth() end},
-        {label = 'Online',    y = display.cy - 52, cb = function() self:onPickOnline() end},
+        {label = 'WiFi LAN',  y = 148, color = WHITE,   cb = function() self:onPickLan() end},
+        {label = 'Hotspot',   y = 120, color = WHITE,   cb = function() self:onPickHotspot() end},
+        {label = 'Bluetooth', y = 92,  color = WHITE,   cb = function() self:onPickBluetooth() end},
+        {label = 'Online',    y = 64,  color = WHITE,   cb = function() self:onPickOnline() end},
     }
     for _, def in pairs(btnDefs) do
         local btn = ui.newTTFLabelMenuItem({
-            label = def.label,
-            size = 18,
+            text = def.label,
+            size = 15,
+            color = def.color,
             listener = def.cb
         })
         local menu = ui.newMenu({btn})
-        menu:setPosition(96, def.y)
+        menu:setPosition(83, def.y)
         self:addChild(menu, 5)
     end
 
@@ -134,8 +161,9 @@ function LocalLobbyLayer:init()
     self:addChild(returnMenu, 6)
 
     self.hostBtn = ui.newTTFLabelMenuItem({
-        label = 'HOST',
+        text = 'HOST',
         size = 20,
+        color = ccc3(255, 214, 90),
         listener = function() self:onHostPressed() end
     })
     self.hostMenu = ui.newMenu({self.hostBtn})
@@ -143,8 +171,9 @@ function LocalLobbyLayer:init()
     self:addChild(self.hostMenu, 6)
 
     self.joinBtn = ui.newTTFLabelMenuItem({
-        label = 'SCAN',
+        text = 'SCAN',
         size = 16,
+        color = ccc3(235, 235, 235),
         listener = function() self:onScanPressed() end
     })
     self.joinMenu = ui.newMenu({self.joinBtn})
