@@ -167,7 +167,7 @@ function SelectLayer:init()
     elseif self.mode == GameMode.RandomDeathmatch then
         modeName = 'RANDOM DEATHMATCH'
     end
-    local modeLabel = display.newTTFLabelWithShadow({
+    local modeLabel = ui.newTTFLabelWithShadow({
         text = modeName,
         size = 11,
         x = self._artCenter.x,
@@ -219,7 +219,7 @@ function SelectLayer:init()
     self:addChild(gridBg, 3)
 
     -- judul kecil di pojok kiri atas
-    local titleLabel = display.newTTFLabelWithShadow({
+    local titleLabel = ui.newTTFLabelWithShadow({
         text = 'PILIH NINJAMU',
         size = 14,
         x = 14,
@@ -328,7 +328,7 @@ function SelectLayer:init()
     rightMenu:setPosition(arrowCenterX + 44, arrowY)
     self:addChild(rightMenu, 10)
 
-    self._pageLabel = display.newTTFLabelWithShadow({
+    self._pageLabel = ui.newTTFLabelWithShadow({
         text = '1 / ' .. tostring(pageNum),
         size = 12,
         x = arrowCenterX,
@@ -337,7 +337,7 @@ function SelectLayer:init()
     })
     self:addChild(self._pageLabel, 10)
 
-    local hint = display.newTTFLabelWithShadow({
+    local hint = ui.newTTFLabelWithShadow({
         text = 'Ketuk 2x untuk konfirmasi ninja',
         size = 9,
         x = 14,
@@ -503,7 +503,7 @@ function SelectLayer:updateBigArt(charName)
         self:addChild(fontArt, 6)
         self._heroName = fontArt
     else
-        local label = display.newTTFLabelWithShadow({
+        local label = ui.newTTFLabelWithShadow({
             text = charName,
             size = 15,
             x = self._artCenter.x,
