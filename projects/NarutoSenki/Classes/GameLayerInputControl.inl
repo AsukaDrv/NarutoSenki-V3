@@ -47,6 +47,8 @@ void GameLayer::JoyStickUpdate(Vec2 direction)
         {
                 if (shouldBlockNetworkBattleInputEcho())
                         return;
+                // Hero mulai jalan → kamera langsung balik fokus ke hero (perilaku ML).
+                cancelMapViewOffset();
                 currentPlayer->walk(direction);
                 // Online: walk() is a no-op for the local player during NATTACK and other blocked states,
                 // but we must not still send joy_update — the peer would apply it to the enemy hero mirror.
@@ -63,6 +65,9 @@ void GameLayer::attackButtonClick(ABType type)
 {
         if (shouldBlockNetworkBattleInputEcho())
                 return;
+        // Serangan/skill/item: kamera balik ke hero dulu (kecuali Recall).
+        if (type != Recall)
+                cancelMapViewOffset();
         if (type == Recall)
         {
                 // Recall: teleport balik ke base + heal fountain.

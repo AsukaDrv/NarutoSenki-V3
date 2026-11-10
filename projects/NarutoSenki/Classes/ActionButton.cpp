@@ -63,7 +63,10 @@ bool ActionButton::containsTouchLocation(Touch *touch)
 
 bool ActionButton::ccTouchBegan(Touch *touch, Event *event)
 {
-	if (!containsTouchLocation(touch) || _delegate->_isAllButtonLocked)
+	// NOTE: Tombol yang tersembunyi (mis. slot gear item2/3/4 sebelum dibeli)
+	// tidak boleh menelan sentuhan — dulu menutupi tombol Recall sehingga
+	// Recall tidak bisa ditekan sama sekali.
+	if (!isVisible() || !containsTouchLocation(touch) || _delegate->_isAllButtonLocked)
 	{
 		return false;
 	}

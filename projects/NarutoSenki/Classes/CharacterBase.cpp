@@ -694,9 +694,9 @@ void CharacterBase::update(float dt)
 		float posX = MIN(getGameLayer()->currentMap->getMapSize().width * getGameLayer()->currentMap->getTileSize().width,
 						 MAX(0, _desiredPosition.x));
 
-		// map height		: 10
-		// backgroud height	: 4.5
-		// floor height		: 5.5
+		// map height           : 10
+		// backgroud height     : 4.5
+		// floor height         : 5.5
 		float poxY = MIN(getGameLayer()->currentMap->getTileSize().height * 5.5, MAX(0, _desiredPosition.y));
 
 		setPosition(Vec2(posX, poxY));
@@ -732,22 +732,59 @@ void CharacterBase::tryCreateNetworkBattleNicknameLabel()
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_MAC || CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
 	if (_networkNicknameLabel || !_hpBar)
 		return;
-	if (GetNetworkForcedTeam() < 0)
-		return;
 
-	const char *nickC = nullptr;
+	// Badge di atas HP bar biar pemain bisa bedain mana ninja yang
+	// dikendalikan komputer (COM) dan mana yang dikendalikan pemain sungguhan:
+	//  - Hero sendiri (player)   : nickname (online) / tanpa badge (offline)
+	//  - Hero lawan utama online : nickname pemain lawan, atau COM kalau bot
+	//  - COM (ally & musuh)      : badge "COM" (biru = ally, merah = musuh)
+	string badgeText;
+	Color3B badgeColor = ccc3(235, 235, 235);
+
 	if (isPlayer())
-		nickC = GetNetworkYourNickname();
+	{
+		if (GetNetworkForcedTeam() < 0)
+			return; // offline: hero sendiri tidak perlu badge
+		const char *nickC = GetNetworkYourNickname();
+		if (nickC && nickC[0])
+			badgeText = nickC;
+		else
+			return;
+	}
 	else if (isNetworkEnemyBattleHero(this))
-		nickC = GetNetworkEnemyNickname();
+	{
+		const char *nickC = GetNetworkEnemyNickname();
+		if (nickC && nickC[0])
+			badgeText = nickC;
+		else if (GetNetworkOpponentIsBot())
+		{
+			badgeText = "COM";
+			badgeColor = ccc3(255, 130, 130);
+		}
+		else
+			return;
+	}
+	else if (isCom() && !isGuardian())
+	{
+		if (getGameLayer() && getGroup() == getGameLayer()->playerGroup)
+		{
+			badgeText = "COM";
+			badgeColor = ccc3(140, 195, 255);
+		}
+		else
+		{
+			badgeText = "COM";
+			badgeColor = ccc3(255, 130, 130);
+		}
+	}
 	else
+	{
 		return;
+	}
 
-	if (!nickC || nickC[0] == '\0')
-		return;
-
-	auto *lbl = CCLabelBMFont::create(nickC, Fonts::Default);
+	auto *lbl = CCLabelBMFont::create(badgeText.c_str(), Fonts::Default);
 	lbl->setScale(0.24f);
+	lbl->setColor(badgeColor);
 	lbl->setAnchorPoint(Vec2(0.5f, 0.f));
 	addChild(lbl, 15);
 	_networkNicknameLabel = lbl;
@@ -1476,8 +1513,8 @@ FiniteTimeAction *CharacterBase::createAnimation(CCArray *ationArray, uint8_t fp
 					// vector<string> valueVector;
 					// while (p != nullptr)
 					// {
-					// 	valueVector.push_back(p);
-					// 	p = strtok(nullptr, split);
+					//      valueVector.push_back(p);
+					//      p = strtok(nullptr, split);
 					// }
 
 					// auto call = CallFunc::create(std::bind(&CharacterBase::setFontEffect, this, valueVector));
@@ -2302,7 +2339,10 @@ void CharacterBase::setRestore(float dt)
 {
 	if (_hpBar)
 	{
-		increaseHpAndUpdateUI(800);
+		// Fountain base: heal cepat (8% maxHP per detik, minimal 800) supaya
+		// Recall ke base bener-bener berguna seperti fountain di Mobile Legends.
+		uint32_t heal = (uint32_t)(getMaxHP() * 0.08f);
+		increaseHpAndUpdateUI(heal > 800 ? heal : 800);
 
 		_healItemEffect = Effect::create("hp_restore", this);
 		_healItemEffect->setPosition(Vec2(_isFlipped ? getContentSize().width / 2 + 16 : getContentSize().width / 2 - 16,
@@ -2417,23 +2457,23 @@ void CharacterBase::setAttackBox(const string &effectType)
 		}
 		// else if (getName() == HeroEnum::Nagato)
 		// {
-		// 	uint realValue;
+		//      uint realValue;
 
-		// 	CharacterBase *attacker = _slayer;
-		// 	CharacterBase *currentAttacker = attacker->_master ? attacker->_master : attacker;
-		// 	float gainValue = 0;
+		//      CharacterBase *attacker = _slayer;
+		//      CharacterBase *currentAttacker = attacker->_master ? attacker->_master : attacker;
+		//      float gainValue = 0;
 
-		// 	if (attacker->getName() == HeroEnum::Nagato)
-		// 	{
-		// 		if (currentAttacker->isAttackGainCKR)
-		// 			gainValue = realValue * 80 / 100;
-		// 		else
-		// 			gainValue = realValue * 65 / 100;
-		// 	}
-		// 	else if (currentAttacker->isAttackGainCKR)
-		// 	{
-		// 		gainValue = realValue * 15 / 100;
-		// 	}
+		//      if (attacker->getName() == HeroEnum::Nagato)
+		//      {
+		//              if (currentAttacker->isAttackGainCKR)
+		//                      gainValue = realValue * 80 / 100;
+		//              else
+		//                      gainValue = realValue * 65 / 100;
+		//      }
+		//      else if (currentAttacker->isAttackGainCKR)
+		//      {
+		//              gainValue = realValue * 15 / 100;
+		//      }
 		// }
 	}
 

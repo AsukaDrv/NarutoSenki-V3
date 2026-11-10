@@ -481,14 +481,24 @@ void HudLayer::initHeroInterface()
                         recallMenuItem = MenuItemSprite::create(recallNormal, recallSelected, nullptr, this, menu_selector(HudLayer::onRecallClick));
                         recallMenuItem->setAnchorPoint(Vec2(0, 0));
                         recallMenu = Menu::create(recallMenuItem, nullptr);
+                        // NOTE: Posisi LAMA (skill5X - w - 8, 2) TABRAKAN dengan
+                        // item3Button yang pakai rumus sama persis — kotak sentuh
+                        // item3 menelan semua tap ke tombol Recall. Pindah ke baris
+                        // kedua (sebelah kiri item4) supaya punya slot sendiri.
                         float recallX = 8.f;
-                        if (skill5Button)
+                        float recallY = 2.f;
+                        if (item4Button)
+                        {
+                                recallX = item4Button->getPositionX() - item4Button->getContentSize().width - 8;
+                                recallY = item4Button->getPositionY();
+                        }
+                        else if (skill5Button)
                                 recallX = skill5Button->getPositionX() - skill5Button->getContentSize().width - 8;
                         else if (skill4Button)
                                 recallX = skill4Button->getPositionX() - skill4Button->getContentSize().width - 8;
                         else if (skill1Button)
                                 recallX = skill1Button->getPositionX() - skill1Button->getContentSize().width - 8;
-                        recallMenu->setPosition(Vec2(recallX, 2));
+                        recallMenu->setPosition(Vec2(recallX, recallY));
                         recallMenu->setTouchPriority(10);
                         addChild(recallMenu, 120);
                 }

@@ -28,6 +28,93 @@ bool _isFullScreen = false;
 
 namespace
 {
+/**
+ * MapDragDelegate — ML-style map dragging.
+ * Targeted touch delegate dengan priority RENDAH (30) sehingga hanya menerima
+ * sentuhan yang TIDAK diklaim joystick (prioritas 0), tombol skill/item (-50),
+ * dan menu (10 / -128). Jadi drag di area kosong layar = geser kamera,
+ * drag di joystick/tombol = kontrol biasa. Multi-touch aman karena tiap
+ * delegate punya touch ID sendiri.
+ */
+class MapDragDelegate : public Node, public CCTouchDelegate
+{
+public:
+        static MapDragDelegate *create(GameLayer *layer)
+        {
+                auto *p = new MapDragDelegate();
+                if (p && p->initWithLayer(layer))
+                {
+                        p->autorelease();
+                        return p;
+                }
+                delete p;
+                return nullptr;
+        }
+
+        bool initWithLayer(GameLayer *layer)
+        {
+                if (!Node::init())
+                        return false;
+                _gl = layer;
+                return true;
+        }
+
+        void onEnter() override
+        {
+                Node::onEnter();
+                Director::sharedDirector()->getTouchDispatcher()->addTargetedDelegate(this, 30, true);
+        }
+
+        void onExit() override
+        {
+                Director::sharedDirector()->getTouchDispatcher()->removeDelegate(this);
+                Node::onExit();
+        }
+
+        bool ccTouchBegan(Touch *touch, Event *event) override
+        {
+                if (!_gl || !_gl->currentPlayer || !_gl->_isStarted || _gl->_isExiting)
+                        return false;
+                if (_gl->_isPause || _gl->_isGear || _gl->ougisChar)
+                        return false;
+                if (_gl->shouldBlockNetworkBattleInputEcho())
+                        return false;
+                _lastTouch = touch->getLocation();
+                _gl->_isMapViewDragging = true;
+                return true;
+        }
+
+        void ccTouchMoved(Touch *touch, Event *event) override
+        {
+                if (!_gl || !_gl->_isMapViewDragging)
+                        return;
+                Vec2 cur = touch->getLocation();
+                // Arah biasa "map mengikuti jari": geser jari ke kanan → kamera lihat ke kiri.
+                _gl->addMapViewOffset(Vec2(-(cur.x - _lastTouch.x), -(cur.y - _lastTouch.y)));
+                _lastTouch = cur;
+        }
+
+        void ccTouchEnded(Touch *touch, Event *event) override
+        {
+                if (_gl)
+                {
+                        _gl->_isMapViewDragging = false;
+                        // Tahan sebentar seperti ML, baru kamera meluncur balik.
+                        _gl->_mapViewReturnDelay = 1.0f;
+                }
+        }
+
+        void ccTouchCancelled(Touch *touch, Event *event) override
+        {
+                if (_gl)
+                        _gl->_isMapViewDragging = false;
+        }
+
+private:
+        GameLayer *_gl = nullptr;
+        Vec2 _lastTouch = Vec2(0, 0);
+};
+
 static Flog *findFlogByNetworkSlot(GameLayer *layer, uint32_t wave, unsigned slot)
 {
         if (!layer || slot >= (unsigned)(2 * kFlogCount))
@@ -217,8 +304,14 @@ void BattleRuntimeSystem::onGameStart(GameLayer *layer, bool skipInitFlogs, floa
                 {
                         const char *remoteHeroName = GetNetworkEnemyHeroName();
                         if (!GetNetworkOpponentIsBot() && remoteHeroName && strlen(remoteHeroName) > 0 &&
-                                hero->getName() == remoteHeroName)
+                                hero->getName() == remoteHeroName &&
+                                hero->getGroup() != layer->playerGroup)
                         {
+                                // Hero lawan yang dikendalikan pemain lain via WS.
+                                // NOTE: Wajib cek group — kalau hero kita (COM) kebetulan
+                                // namanya sama dengan hero lawan, AI-nya ikut dimatikan
+                                // dan COM itu diam total sepanjang match (tidak jalan,
+                                // tidak nyerang).
                                 hero->unschedule(schedule_selector(CharacterBase::setAI));
                                 hero->_isAI = false;
                                 continue;
@@ -260,6 +353,11 @@ void BattleRuntimeSystem::updateViewPoint(GameLayer *layer) const
                 playerPoint = layer->controlChar->getPosition();
         else
                 playerPoint = layer->currentPlayer->getPosition();
+
+        // ML-style look-around: offset dari drag peta (diabaikan saat cut-in
+        // ougis supaya kamera tetap fokus ke animasi ultimate).
+        if (!layer->ougisChar)
+                playerPoint = playerPoint + layer->_mapViewOffset;
 
         int x = MAX(playerPoint.x, winSize.width / 2);
         int y = MAX(playerPoint.y, winSize.width / 2);
@@ -340,6 +438,9 @@ GameLayer::~GameLayer()
 
 bool GameLayer::init()
 {
+        if (!Layer::init())
+                return false;
+
         Texture2D::setDefaultAlphaPixelFormat(kCCTexture2DPixelFormat_RGBA8888);
         setTouchEnabled(true);
 
@@ -351,7 +452,13 @@ bool GameLayer::init()
         is4V4Mode = gd.use4v4SpawnLayout;
         playerGroup = gd.playerGroup;
 
-        return Layer::init();
+        // ML-style map drag handler (lihat MapDragDelegate di atas).
+        // Hanya menerima sentuhan area kosong; joystick/tombol tetap utama.
+        auto *mapDrag = MapDragDelegate::create(this);
+        if (mapDrag)
+                addChild(mapDrag, 9999);
+
+        return true;
 }
 
 void GameLayer::onEnter()
@@ -592,6 +699,7 @@ void GameLayer::initHeros()
         initTower();
 
         schedule(schedule_selector(GameLayer::updateViewPoint), 0.00f);
+        schedule(schedule_selector(GameLayer::tickMapViewReturn), 0.00f);
         scheduleOnce(schedule_selector(GameLayer::playGameOpeningAnimation), 0.5f);
 }
 
@@ -961,6 +1069,55 @@ void GameLayer::updateViewPoint(float dt)
         processRemoteInputQueue(this);
 #endif
         _battleRuntimeSystem->updateViewPoint(this);
+}
+
+// ----------------------------------------------------------------------
+// ML-style map dragging (geser peta kek Mobile Legends)
+// ----------------------------------------------------------------------
+void GameLayer::addMapViewOffset(const Vec2 &delta)
+{
+        _mapViewOffset = _mapViewOffset + delta;
+
+        // Batasi biar kamera tidak 'terbang' terlalu jauh dari hero.
+        const float kMaxLookRange = winSize.width * 0.9f;
+        const float len = _mapViewOffset.getLength();
+        if (len > kMaxLookRange)
+                _mapViewOffset = _mapViewOffset * (kMaxLookRange / len);
+}
+
+void GameLayer::cancelMapViewOffset()
+{
+        _mapViewOffset = Vec2(0, 0);
+        _mapViewReturnDelay = 0.f;
+        _isMapViewDragging = false;
+}
+
+void GameLayer::tickMapViewReturn(float dt)
+{
+        if (_isMapViewDragging || _mapViewOffset.equals(Vec2(0, 0)))
+                return;
+
+        // Cut-in ougis: kamera harus balik fokus ke animasi ultimate.
+        if (ougisChar)
+        {
+                cancelMapViewOffset();
+                return;
+        }
+
+        if (_mapViewReturnDelay > 0.f)
+        {
+                _mapViewReturnDelay -= dt;
+                return;
+        }
+
+        // Meluncur balik mulus ke hero (~0.25 detik tergantung jarak).
+        const float kReturnSpeed = 2400.f;
+        const float len = _mapViewOffset.getLength();
+        const float step = kReturnSpeed * dt;
+        if (step >= len || len < 1.f)
+                _mapViewOffset = Vec2(0, 0);
+        else
+                _mapViewOffset = _mapViewOffset * (1.f - step / len);
 }
 
 void GameLayer::setTowerState(int charId)

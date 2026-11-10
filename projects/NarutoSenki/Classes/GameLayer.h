@@ -133,6 +133,15 @@ public:
         void updateViewPoint(float dt);
         void updateGameTime(float dt);
 
+        /** ML-style look-around: geser peta dengan drag di area kosong layar.
+         * Setelah dilepas, kamera meluncur balik ke hero secara otomatis. */
+        void addMapViewOffset(const Vec2 &delta);
+        void cancelMapViewOffset();
+        void tickMapViewReturn(float dt);
+        bool _isMapViewDragging = false;
+        Vec2 _mapViewOffset = Vec2(0, 0);
+        float _mapViewReturnDelay = 0.f;
+
         Hero *addHero(const HeroData &data, int charId);
         Hero *addHero(const string &name, Role role, Group group, Vec2 spawnPoint, int charNo);
         void addFlog(float dt);
