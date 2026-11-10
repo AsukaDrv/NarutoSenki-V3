@@ -5,6 +5,8 @@
 #include "Data/UnitData.h"
 #include <memory>
 #include <string>
+#include <map>
+#include <utility>
 
 #if (CC_TARGET_PLATFORM == CC_PLATFORM_WIN32)
 #include "glfw3.h"
@@ -141,6 +143,18 @@ public:
         bool _isMapViewDragging = false;
         Vec2 _mapViewOffset = Vec2(0, 0);
         float _mapViewReturnDelay = 0.f;
+
+        /** Watchdog AI COM: tiap detik pastikan setiap COM di match lokal
+         * masih punya setAI terjadwal. Ada beberapa jalur skill (Ino
+         * Shintenshin, Kage, mind-control, dsb.) yang unschedule setAI
+         * tapi tidak selalu mengembalikannya -> COM jadi beku (diam total,
+         * tidak jalan & tidak nyerang) sampai mati. Watchdog menyala-kan
+         * ulang AI-nya otomatis. */
+        void tickComAIWatchdog(float dt);
+        /** Deteksi COM macet: (state, hitungan tick beruntun) per COM yang
+         * terjebak di state yang sama selain IDLE/WALK/NATTACK >8 detik
+         * (animasi skill yang tidak selesai, hurt yang tidak lepas, dsb.). */
+        std::map<Hero *, std::pair<uint16_t, int>> _comAiStuckTicks;
 
         Hero *addHero(const HeroData &data, int charId);
         Hero *addHero(const string &name, Role role, Group group, Vec2 spawnPoint, int charNo);

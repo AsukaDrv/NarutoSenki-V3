@@ -269,6 +269,9 @@ void BattleRuntimeSystem::onGameStart(GameLayer *layer, bool skipInitFlogs, floa
         layer->getHudLayer()->openingSprite = nullptr;
         layer->schedule(schedule_selector(GameLayer::updateGameTime), 1.0f);
         layer->schedule(schedule_selector(GameLayer::checkBackgroundMusic), 2.0f);
+        // Watchdog AI COM (lihat tickComAIWatchdog) — jaga supaya NPC tidak
+        // pernah kehilangan AI secara permanen selama match.
+        layer->schedule(schedule_selector(GameLayer::tickComAIWatchdog), 1.0f);
         if (!skipInitFlogs)
         {
                 layer->initFlogs();
@@ -1118,6 +1121,106 @@ void GameLayer::tickMapViewReturn(float dt)
                 _mapViewOffset = Vec2(0, 0);
         else
                 _mapViewOffset = _mapViewOffset * (1.f - step / len);
+}
+
+// ----------------------------------------------------------------------
+// COM AI watchdog — cegah NPC beku (diam total, tidak jalan & tidak
+// nyerang) di single player maupun mabar.
+//
+// Ada beberapa jalur yang unschedule CharacterBase::setAI tanpa jaminan
+// di-schedule ulang:
+//  - Ino Shintenshin: COM yang dimainkan lalu dilepas tidak pernah dapat
+//    doAI() lagi (lihat Ino.hpp resumeAction/setActionResume).
+//  - Monster Kage / summon yang menyerap AI lewat unschedule.
+//  - Hero mirror lawan online yang respawn.
+// Kalau COM kehilangan AI di tengah match, dia berdiri diam selamanya
+// sampai mati. Watchdog ini tiap detik memastikan AI COM selalu hidup.
+// ----------------------------------------------------------------------
+void GameLayer::tickComAIWatchdog(float dt)
+{
+        if (!_isStarted || _isExiting || _hasGameOverTriggered)
+                return;
+
+#if (CC_TARGET_PLATFORM == CC_PLATFORM_MAC || CC_TARGET_PLATFORM == CC_PLATFORM_ANDROID)
+        // Hero yang sedang dikendalikan pemain lawan via WS (bukan bot).
+        // AI-nya memang sengaja dimatikan — jangan ikut campur.
+        CharacterBase *remoteTarget = getRemoteControlTarget(this);
+#else
+        CharacterBase *remoteTarget = nullptr;
+#endif
+
+        for (auto hero : _CharacterArray)
+        {
+                if (!hero || hero->getState() == State::DEAD || !hero->isCom())
+                {
+                        _comAiStuckTicks.erase(hero);
+                        continue;
+                }
+
+                // Sedang dikendalikan pemain (mis. kena Ino Shintenshin) —
+                // AI memang harus mati selama dikendalikan.
+                if (hero->_isControlled || hero == remoteTarget)
+                {
+                        _comAiStuckTicks.erase(hero);
+                        continue;
+                }
+
+                // Cut-in ougis: caster sedang main animasi ultimate — jangan
+                // dianggap macet, schedulernya juga sedang dipause.
+                if (ougisChar == hero)
+                {
+                        _comAiStuckTicks.erase(hero);
+                        continue;
+                }
+
+                const State st = hero->getState();
+                const bool freeState = (st == State::IDLE || st == State::WALK || st == State::NATTACK);
+
+                // --- 1) Pastikan AI selalu terjadwal ---
+                // CCScheduler::scheduleSelector pada selector yang sudah
+                // terjadwal hanya meng-update interval (tidak duplikat, tidak
+                // reset waktu berjalan), jadi doAI() aman dipanggil tiap tick:
+                // kalau AI sudah hidup tidak ada efek samping, kalau AI hilang
+                // akan menyala lagi. _isAI == false berarti handler AI belum
+                // pernah dipasang (atau baru dilepas dari mind-control) ->
+                // butuh doAI() penuh untuk memasang aiHandler.
+                if (hero->_isAI)
+                        hero->CharacterBase::doAI();
+                else
+                        hero->doAI();
+
+                // --- 2) Macet di state non-free terlalu lama -> paksa pulih ---
+                // Skill/hurt yang normal pulihnya <2-3 detik. Kalau COM menetap
+                // di state yang SAMA (bukan IDLE/WALK/NATTACK) lebih dari 8
+                // detik, animasinya pasti tidak selesai (resumeAction tidak
+                // pernah ke-trigger) -> dia jadi patung walau AI-nya jalan.
+                // Reset lewat idle(): bersihkan flag transien + animasi idle,
+                // lalu AI mengambil keputusan lagi di tick berikutnya.
+                if (!freeState && !hero->_isInvincible)
+                {
+                        auto &slot = _comAiStuckTicks[hero];
+                        if (slot.first == static_cast<uint16_t>(st))
+                        {
+                                slot.second += 1;
+                        }
+                        else
+                        {
+                                slot.first = static_cast<uint16_t>(st);
+                                slot.second = 1;
+                        }
+
+                        if (slot.second >= 8)
+                        {
+                                _comAiStuckTicks.erase(hero);
+                                hero->idle();
+                                hero->CharacterBase::doAI();
+                        }
+                }
+                else
+                {
+                        _comAiStuckTicks.erase(hero);
+                }
+        }
 }
 
 void GameLayer::setTowerState(int charId)
